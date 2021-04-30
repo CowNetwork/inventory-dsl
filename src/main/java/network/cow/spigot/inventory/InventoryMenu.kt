@@ -11,6 +11,7 @@ import org.bukkit.event.inventory.InventoryType
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryView
 import org.bukkit.plugin.java.JavaPlugin
+import java.awt.Dimension
 import java.awt.Point
 
 /**
@@ -102,15 +103,19 @@ open class InventoryMenu {
     }
 
     fun getSection(from: Point, to: Point) : InventorySection {
-        // TODO: check if in bounds
+        if (!this.isInBounds(from)) throw IllegalArgumentException("The 'from' position ($from) is out of bounds.")
+        if (!this.isInBounds(to)) throw IllegalArgumentException("The 'to' position ($to) is out of bounds.")
+
         val section = InventorySection(from, to)
         this.items.forEach { entry ->
             val point = entry.key
-            // TODO: check if in bounds
+            point.isInBounds(from, to)
             section.item(this.getSlot(point), entry.value)
         }
         return section
     }
+
+    fun getSection(from: Point, dimensions: Dimension) = this.getSection(from, Point(from.x + dimensions.width - 1, from.y + dimensions.height - 1))
 
     fun open(flushHistory: Boolean = true) {
         if (flushHistory) {
@@ -170,5 +175,11 @@ open class InventoryMenu {
         slot % this.width,
         slot / this.width
     )
+
+    fun isInBounds(point: Point) : Boolean {
+        if (point.x < 0 || point.x >= this.width) return false
+        if (point.y < 0 || point.y >= this.height) return false
+        return true
+    }
 
 }

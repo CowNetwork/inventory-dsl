@@ -1,5 +1,7 @@
 package network.cow.spigot.inventory
 
+import com.google.common.base.Preconditions
+import java.awt.Dimension
 import java.awt.Point
 
 /**
@@ -15,13 +17,23 @@ open class InventorySection(val from: Point, val to: Point) : ItemContainer, Inv
     val height = (to.y - from.y) + 1
 
     fun section(section: InventorySection) {
+        if (!this.isInBounds(section.from)) throw IllegalArgumentException("The 'from' position (${section.from}) is out of bounds.")
+        if (!this.isInBounds(section.to)) throw IllegalArgumentException("The 'to' position (${section.to}) is out of bounds.")
+
         this.components.add(section)
     }
 
     fun section(from: Point, to: Point, init: InventorySection.() -> Unit) {
+        if (!this.isInBounds(from)) throw IllegalArgumentException("The 'from' position ($from) is out of bounds.")
+        if (!this.isInBounds(to)) throw IllegalArgumentException("The 'to' position ($to) is out of bounds.")
+
         val section = InventorySection(from, to)
         section.init()
         this.components.add(section)
+    }
+
+    fun section(from: Point, dimensions: Dimension, init: InventorySection.() -> Unit) {
+        this.section(from, Point(from.x + dimensions.width - 1, from.y + dimensions.height - 1), init)
     }
 
     fun border(init: InventorySection.() -> Unit) {
@@ -48,6 +60,7 @@ open class InventorySection(val from: Point, val to: Point) : ItemContainer, Inv
     fun lastColumn(init: InventorySection.() -> Unit) = this.columnFromLast(0, init)
 
     override fun item(slot: Int, item: InventoryItem) : InventoryItem {
+        if (!this.isInBounds(slot)) throw IllegalArgumentException("The slot ($slot) is out of bounds.")
         this.components.add(InventoryItemComponent(this.getPosition(slot), item))
         return item
     }
@@ -72,11 +85,23 @@ open class InventorySection(val from: Point, val to: Point) : ItemContainer, Inv
         slot / this.width
     )
 
+    fun isInBounds(slot: Int) : Boolean {
+        if (slot < 0) return false
+        if (slot > this.getSlot(this.width - 1, this.height - 1)) return false
+        return true
+    }
+
+    fun isInBounds(point: Point) : Boolean {
+        if (point.x < 0 || point.x >= this.width) return false
+        if (point.y < 0 || point.y >= this.height) return false
+        return true
+    }
+
     fun getSubSection(from: Point, to: Point) : InventorySection {
         val section = InventorySection(from, to)
         this.getItems().forEach { entry ->
             val point = entry.key
-            // TODO: check if in bounds
+            point.isInBounds(from, to)
             section.item(this.getSlot(point), entry.value)
         }
         return section
