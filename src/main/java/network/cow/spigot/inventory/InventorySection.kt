@@ -24,6 +24,13 @@ open class InventorySection(val from: Point, val to: Point) : ItemContainer, Inv
         this.components.add(section)
     }
 
+    fun border(init: InventorySection.() -> Unit) {
+        this.firstRow(init)
+        this.lastRow(init)
+        this.firstColumn(init)
+        this.lastColumn(init)
+    }
+
     fun row(row: Int, init: InventorySection.() -> Unit) = this.section(Point(0, row), Point(this.to.x, row), init)
 
     fun rowFromLast(row: Int, init: InventorySection.() -> Unit) = this.row(this.to.y - row, init)
