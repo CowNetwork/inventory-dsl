@@ -9,6 +9,7 @@ import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryType
 import org.bukkit.inventory.Inventory
+import org.bukkit.inventory.InventoryView
 import org.bukkit.plugin.java.JavaPlugin
 import java.awt.Point
 
@@ -34,27 +35,56 @@ open class InventoryMenu {
 
     constructor(owner: Player, type: InventoryType, title: Component, init: (InventorySection.() -> Unit)? = null) {
         this.inventory = Bukkit.createInventory(owner, type, title)
-        init?.let { this.update(init) }
+        this.init(init)
     }
 
     constructor(owner: Player, type: InventoryType, init: (InventorySection.() -> Unit)? = null) {
         this.inventory = Bukkit.createInventory(owner, type)
-        init?.let { this.update(init) }
+        this.init(init)
     }
 
     constructor(owner: Player, size: Int, title: Component, init: (InventorySection.() -> Unit)? = null) {
         this.inventory = Bukkit.createInventory(owner, size, title)
-        init?.let { this.update(init) }
+        this.init(init)
     }
 
     constructor(owner: Player, size: Int, init: (InventorySection.() -> Unit)? = null) {
         this.inventory = Bukkit.createInventory(owner, size)
-        init?.let { this.update(init) }
+        this.init(init)
     }
 
-    constructor(owner: Player, type: InventoryType, title: String) : this(owner, type, Component.text(title))
+    constructor(owner: Player, inventory: Inventory, title: Component, init: (InventorySection.() -> Unit)? = null) {
+        this.inventory = when (inventory.type) {
+            InventoryType.CHEST -> Bukkit.createInventory(owner, inventory.size, title)
+            else -> Bukkit.createInventory(owner, inventory.size, title)
+        }
+        this.init(init, inventory)
+    }
 
-    constructor(owner: Player, size: Int, title: String) : this(owner, size, Component.text(title))
+    constructor(owner: Player, inventory: Inventory, init: (InventorySection.() -> Unit)? = null) {
+        this.inventory = when (inventory.type) {
+            InventoryType.CHEST -> Bukkit.createInventory(owner, inventory.size)
+            else -> Bukkit.createInventory(owner, inventory.size)
+        }
+        this.init(init, inventory)
+    }
+
+    constructor(owner: Player, view: InventoryView, title: Component, init: (InventorySection.() -> Unit)? = null) : this(owner, view.topInventory, title, init)
+
+    constructor(owner: Player, view: InventoryView, init: (InventorySection.() -> Unit)? = null) : this(owner, view.topInventory, view.title(), init)
+
+    private fun init(init: (InventorySection.() -> Unit)? = null, inventory: Inventory? = null) {
+        inventory?.let {
+            this.update {
+                repeat(inventory.size) { index ->
+                    val itemStack = inventory.getItem(index) ?: return@repeat
+                    item(index) { itemStack }
+                }
+            }
+        }
+
+        init?.let { this.update(init) }
+    }
 
     fun update(init: InventorySection.() -> Unit) {
         val section = InventorySection(Point(0, 0), Point(this.width - 1, this.height - 1))
@@ -71,10 +101,21 @@ open class InventoryMenu {
         })
     }
 
+    fun getSection(from: Point, to: Point) : InventorySection {
+        // TODO: check if in bounds
+        val section = InventorySection(from, to)
+        this.items.forEach { entry ->
+            val point = entry.key
+            // TODO: check if in bounds
+            section.item(this.getSlot(point), entry.value)
+        }
+        return section
+    }
+
     fun open(flushHistory: Boolean = true) {
         if (flushHistory) {
             this.player.clearState(InventoryDslPlugin::class.java, STATE_KEY_CURRENT_INVENTORY)
-            this.clearParent()
+            this.clearHistory()
         }
 
         this.parent = this.player.getState(InventoryDslPlugin::class.java, STATE_KEY_CURRENT_INVENTORY)
@@ -112,13 +153,22 @@ open class InventoryMenu {
         }
     }
 
-    fun clearParent() {
-        this.parent?.clearParent()
+    fun clearHistory() {
+        this.parent?.clearHistory()
         this.parent = null
     }
 
     fun silent(silent: Boolean = true) {
         this.isSilent = silent
     }
+
+    fun getSlot(x: Int, y: Int) = y * this.width + x
+
+    fun getSlot(position: Point) = this.getSlot(position.x, position.y)
+
+    fun getPosition(slot: Int) = Point(
+        slot % this.width,
+        slot / this.width
+    )
 
 }

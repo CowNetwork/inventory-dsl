@@ -14,6 +14,10 @@ open class InventorySection(val from: Point, val to: Point) : ItemContainer, Inv
     val width = (to.x - from.x) + 1
     val height = (to.y - from.y) + 1
 
+    fun section(section: InventorySection) {
+        this.components.add(section)
+    }
+
     fun section(from: Point, to: Point, init: InventorySection.() -> Unit) {
         val section = InventorySection(from, to)
         section.init()
@@ -54,10 +58,22 @@ open class InventorySection(val from: Point, val to: Point) : ItemContainer, Inv
 
     fun getSlot(x: Int, y: Int) = y * this.width + x
 
+    fun getSlot(position: Point) = this.getSlot(position.x, position.y)
+
     fun getPosition(slot: Int) = Point(
         slot % this.width,
         slot / this.width
     )
+
+    fun getSubSection(from: Point, to: Point) : InventorySection {
+        val section = InventorySection(from, to)
+        this.getItems().forEach { entry ->
+            val point = entry.key
+            // TODO: check if in bounds
+            section.item(this.getSlot(point), entry.value)
+        }
+        return section
+    }
 
     override fun getItems(): Map<Point, InventoryItem> {
         val items = mutableMapOf<Point, InventoryItem>()
