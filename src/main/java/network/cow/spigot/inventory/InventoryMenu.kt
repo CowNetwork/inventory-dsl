@@ -25,7 +25,7 @@ open class InventoryMenu {
 
     var parent: InventoryMenu? = null
 
-    val inventory: Inventory
+    var inventory: Inventory; private set
     val player: Player get() = this.inventory.holder!! as Player
     val items = mutableMapOf<Point, InventoryItem>()
 
@@ -33,24 +33,29 @@ open class InventoryMenu {
     val height: Int get() = this.inventory.getHeight()
 
     var isSilent: Boolean = false
+    val title: Component // TODO: allow changing title
 
     constructor(owner: Player, type: InventoryType, title: Component, init: (InventorySection.() -> Unit)? = null) {
         this.inventory = Bukkit.createInventory(owner, type, title)
+        this.title = title
         this.init(init)
     }
 
     constructor(owner: Player, type: InventoryType, init: (InventorySection.() -> Unit)? = null) {
         this.inventory = Bukkit.createInventory(owner, type)
+        this.title = type.defaultTitle()
         this.init(init)
     }
 
     constructor(owner: Player, size: Int, title: Component, init: (InventorySection.() -> Unit)? = null) {
         this.inventory = Bukkit.createInventory(owner, size, title)
+        this.title = title
         this.init(init)
     }
 
     constructor(owner: Player, size: Int, init: (InventorySection.() -> Unit)? = null) {
         this.inventory = Bukkit.createInventory(owner, size)
+        this.title = this.inventory.type.defaultTitle()
         this.init(init)
     }
 
@@ -59,6 +64,7 @@ open class InventoryMenu {
             InventoryType.CHEST -> Bukkit.createInventory(owner, inventory.size, title)
             else -> Bukkit.createInventory(owner, inventory.size, title)
         }
+        this.title = title
         this.init(init, inventory)
     }
 
@@ -67,6 +73,7 @@ open class InventoryMenu {
             InventoryType.CHEST -> Bukkit.createInventory(owner, inventory.size)
             else -> Bukkit.createInventory(owner, inventory.size)
         }
+        this.title = this.inventory.type.defaultTitle()
         this.init(init, inventory)
     }
 
@@ -123,11 +130,14 @@ open class InventoryMenu {
             this.clearHistory()
         }
 
-        this.parent = this.player.getState(InventoryDslPlugin::class.java, STATE_KEY_CURRENT_INVENTORY)
-        this.player.setState(InventoryDslPlugin::class.java, STATE_KEY_CURRENT_INVENTORY, this)
+        if (this.player.openInventory == this.inventory) {
+            this.player.setState(InventoryDslPlugin::class.java, STATE_KEY_CURRENT_INVENTORY, this)
+            return
+        }
 
-        if (this.player.openInventory == this.inventory) return
         Bukkit.getScheduler().runTask(JavaPlugin.getPlugin(InventoryDslPlugin::class.java), Runnable {
+            this.parent = this.player.getState(InventoryDslPlugin::class.java, STATE_KEY_CURRENT_INVENTORY)
+            this.player.setState(InventoryDslPlugin::class.java, STATE_KEY_CURRENT_INVENTORY, this)
             this.player.openInventory(this.inventory)
         })
     }

@@ -19,8 +19,6 @@ class InventoryListener : Listener {
         if (player !is Player) return
 
         val currentMenu = player.getState<InventoryMenu>(InventoryDslPlugin::class.java, InventoryMenu.STATE_KEY_CURRENT_INVENTORY) ?: return
-        if (event.inventory != currentMenu.inventory) return
-
         currentMenu.click(event.slot)
         event.isCancelled = true
     }
